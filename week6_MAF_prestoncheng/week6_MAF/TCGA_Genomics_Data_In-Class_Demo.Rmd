@@ -8,17 +8,20 @@ updated: 10/2/24
 ###### (1) Setting Up! 
 
 ```{r setup}
-    knitr::opts_knit$set(root.dir = normalizePath("/PATH/TO/analysis_data")) 
+    knitr::opts_knit$set(root.dir = normalizePath("/home1/chengpre/490_cluster/analysis_data")) 
 ```
 
 ```{r}
 # install and load maftools, TCGAbiolinks, and ggplot2
+library(maftools)
+library(TCGAbiolinks)
+library(ggplot2)
 ```
 
 Before we get into MAF, we need to read in the clinical data (created in Introduction_to_Clinical.Rmd) so it can be merged with our MAF data later on.
 
 ```{r Exercise 1.1}
-clinical <- read.csv("/PATH/TO/analysis_data/brca_clinical_data.csv")
+clinical <- read.csv("/home1/chengpre/490_cluster/analysis_data/brca_clinical_data.csv")
 ```
 
 Check that the bcr_patient barcode has been renamed to Tumor_Sample_Barcode which should have been done in the Introduction_to_Clinical.Rmd homework. This allows the MAF package to read our clinical file. If not, do the following commands to change the column names appropriately and then re-save the clinical data frame to your computer. 
@@ -37,7 +40,7 @@ Now, we can query in the MAF files using GDCquery()/GDCdownload()/GDCprepare() a
 
 ```{r Exercise 2.1}
 maf_query <- GDCquery(
-    project = FILL IN HERE, 
+    project = "TCGA-BRCA", 
     data.category = "Simple Nucleotide Variation", 
     access = "open", # we only have access to somatic mutations which are open access
     data.type = "Masked Somatic Mutation", 
@@ -48,8 +51,8 @@ maf_query <- GDCquery(
 
 maf <- GDCprepare(maf_query) # as long as it runs, ignore any errors
 
-maf_object <- read.maf(maf = FILL IN HERE, 
-                       clinicalData = FILL IN HERE,
+maf_object <- read.maf(maf = GDCprepare(maf_query), 
+                       clinicalData = clinical,
                        isTCGA = TRUE)
 ```
 
@@ -59,12 +62,13 @@ Call str() on maf_object.
 
 ```{r Exercise 3.1}
 # write code here
+str(maf_object)
 ```
 
 Notice the @ and $ signs. What do each of them represent?
 
-  @ represents:
-  $ represents:
+  @ represents: which data frame you are in
+  $ represents: which column you are looking at
   
 List all of the data frames within the maf_object by typing maf_object@ then either waiting for a popup, or if no popup appears, by hitting tab.
 
