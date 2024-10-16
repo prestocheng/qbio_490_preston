@@ -1,0 +1,125 @@
+---
+title: "Introduction to MAF"
+author: Mahija Mogalipuvvu, adapted from Nicole Black, Wade Boohar
+date: 07/17/22
+updated: 10/3/24
+Preston Cheng
+---
+
+***Deliverables***
+- upload this R Notebook to your GitHub and submit the link to your Repo on Brightspace
+- include ALL graphs or figures created in this assignment in a folder with your R notebook with descriptive file names.
+
+We encourage you to work with a partner. Therefore, it is okay if your answers are the same as your partner’s as long as everyone understands it and could explain it in their own words if asked. Each person must individually push their code to Github. *At the top of your R Notebook, write the name of you and your partner(s) as a comment.*
+
+***Complete the following coding activity and answer any following questions as comments in your R Notebook***
+
+In this assignment, you will need to use your skills learned in class to demonstrate your understanding of categorical variables and R data structures.
+
+*Pre-Assignment*
+Load all necessary packages, read in the clinical data.csv file you have in your analysis_data folder, and instantiate the MAF_object.
+```{r}
+knitr::opts_knit$set(root.dir = normalizePath("/home1/chengpre/490_cluster/analysis_data")) 
+library(maftools)
+library(TCGAbiolinks)
+library(ggplot2)
+clinical <- read.csv("/home1/chengpre/490_cluster/analysis_data/brca_clinical_data.csv")
+
+maf_query <- GDCquery(
+  project = 'TCGA-BRCA',
+  data.category = "Simple Nucleotide Variation",
+  access = "open", # we only have access to somatic mutations which are open access
+  data.type = "Masked Somatic Mutation",
+  workflow.type = "Aliquot Ensemble Somatic Variant Merging and Masking"
+)
+
+#GDCdownload(maf_query)
+
+maf <- GDCprepare(maf_query) # as long as it runs, ignore any errors
+
+maf_object <- read.maf(maf = maf,
+                       clinicalData = clinical, 
+                       isTCGA = TRUE)
+```
+
+
+*1*
+Choose a clinical variable (or any variable from clin_rad or clin_drug) to separate your populations into two different groups and rewrite the column or create a new column with that variable as a factor. ***Do not use age or vital_status as your clinical variable.*** Hint: if your variable is continuous, you will need to determine your own cutoffs for the different levels of the factor. If your variable is categorical and has more than two possible values, choose the two that are the most common.
+```{r}
+race_mask <- ifelse(maf_object@clinical.data$race == 'WHITE', T, ifelse(maf_object@clinical.data$race == 'BLACK OR AFRICAN AMERICAN', T, F))
+
+maf_object@clinical.data <- maf_object@clinical.data[race_mask, ]
+
+maf_object@clinical.data$race <- factor(maf_object@clinical.data$race)
+
+```
+
+*2*
+Create a co-oncoplot with the top 10-20 (you choose) most mutated genes for the two groups. Pick one that has a large discrepancy in % mutated or type of mutations between the groups and research it. 
+Research it. What is the gene used for? Can you think of any reason for the discrepancy?
+```{r}
+white_mask <- ifelse(maf_object@clinical.data$race == 'WHITE', T, F)
+white_patient_barcodes <- maf_object@clinical.data$Tumor_Sample_Barcode[white_mask]
+                                                                         
+white_maf <- subsetMaf(maf = maf_object,
+                       tsb = white_patient_barcodes)
+
+black_mask <- ifelse(maf_object@clinical.data$race == 'BLACK OR AFRICAN AMERICAN', T, F)
+black_patient_barcodes <- maf_object@clinical.data$Tumor_Sample_Barcode[black_mask]
+  
+black_maf <- subsetMaf(maf = maf_object,
+                       tsb = black_patient_barcodes)
+
+coOncoplot(m1 = white_maf, 
+           m2 = black_maf, 
+           m1Name = "White", 
+           m2Name = "Black", 
+           borderCol = NA)
+
+
+```
+There appears to be a large discrepancy between white and black patients regarding the presence of a mutated pik3ca gene. Pik3ca is responsible for the p110 alpha protein, which helps to regulate cell division. 
+
+
+*3*
+Create a contingency table with your variable and chosen gene. Run a Fisher’s Exact Test between presence of mutations for that gene and your clinical variable. Create and save a mosaic plot. 
+Interpret the output of the Fisher’s Exact Test in terms of the odds ratio and p-value.
+```{r}
+PIK_maf <- subsetMaf(maf = maf_object,
+                       genes = "PIK3CA")
+PIK_maf@clinical.data$has_PIK <- PIK_maf@clinical.data$Tumor_Sample_Barcode3
+contig <- table(PIK_maf@clinical.data$race, PIK_maf@clinical.data$has_PIK)
+
+mosaicplot(contig)
+
+fisher <- fisher.test(contig)
+```
+
+
+*4*
+Subset your maf_object based on your chosen clinical variable and create a co-lollipop plot of your chosen gene divided between the two different clinical variable possibilities. Include descriptive names on your plot.
+Do you notice any difference in terms of mutations (e.g. sites, types, number) between the two populations?
+```{r}
+lollipopPlot2(m1 = white_maf, 
+              m2 = black_maf, 
+              m1_name = 'White',
+              m2_name = 'Black',
+              gene = 'PIK3CA') 
+```
+The only difference seems to be some extra missense mutations located on the PI3Ka_l gene for white patients. Otherwise, it seems that white and black patients have mutations on the same genes, white patients simply have more mutations.
+
+*5*
+Create your Overall_Survival_Status column and create a mafSurvival KM plot based on mutations in your chosen gene.
+Does there seem to be a difference? Hypothesize why or not based on the other analysis you did with the gene above.
+```{r}
+maf_object@clinical.data$survival_time <- ifelse(maf_object@clinical.data$vital_status == "Dead", maf_object@clinical.data$death_days_to, maf_object@clinical.data$last_contact_days_to)
+
+maf_object@clinical.data$death_event <- maf_object@clinical.data$vital_status == "Dead"
+
+mafSurvival(maf = maf_object,
+            genes = "PIK3CA",
+            time = "survival_time",
+            Status = "death_event", 
+            isTCGA = TRUE)
+```
+There does not seem to be any significance in the survival times between patients with the PIK3CA mutation and patients without. Since the mutations seem to be mostly missense, unless a critical amino acid happened to be changed, it is less likely for the mutations to be as damaging as frameshift ones.
