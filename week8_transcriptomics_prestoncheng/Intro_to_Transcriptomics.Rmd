@@ -18,18 +18,21 @@ In SummarizedExperiment Tutorial, you learned how to manipulate the SummarizedEx
 *Pre-Assignment*
 Use knitr function to set your working directory to your analysis_data folder in 490_cluster.
 ```{r setup}
- knitr::opts_knit$set(root.dir = normalizePath("/PATH/TO/analysis_data"))
+ knitr::opts_knit$set(root.dir = normalizePath("/home1/chengpre/490_cluster/analysis_data"))
 ```
 
 If DESeq2 is not already installed, install it now
 ```{r}
-if (!require("DESeq2", quietly = TRUE))
-BiocManager::install("DESeq2")
+#BiocManager::install("DESeq2")
+#BiocManager::install("EnhancedVolcano")
 ```
 
 Load in all necessary packages
 ```{r}
-
+library(DESeq2)
+library(TCGAbiolinks)
+library(EnhancedVolcano)
+library(SummarizedExperiment)
 ```
 
 
@@ -38,8 +41,9 @@ Load in all necessary packages
 Read in the rna_clinical, rna_genes, and rna_counts dataframes which you made in the "SummarizedExperiment Guided Tutorial" R Notebook
 
 ```{r}
-
-
+rna_clinical <- read.csv("brca_rna_clinical_data.csv")
+rna_counts <- read.csv("brca_rna_count_data.csv", row.names=1)
+rna_genes <- read.csv("brca_rna_gene_data.csv")
 ```
 
 
@@ -48,7 +52,18 @@ In this assignment, you will run differential expression analysis comparing pati
 
 Manipulate those columns so that they are ready for differential expression analysis (hint: what kind of variables are they? what data type are they by default? do you need to handle unknown values?) Filter out genes with a total expression across all patients less than 1000.
 ```{r}
-
+age_mask <- !is.na(rna_clinical$age_at_diagnosis)
+rna_clinical_cleaned <- rna_clinical[age_mask, ]
+rna_counts_cleaned <- rna_counts[ ,age_mask]
+rna_genes_cleaned <- rna_genes[age_mask, ]
+#unique(rna_clinical_cleaned$age_at_diagnosis)
+less_1000_mask <-  rowSums(rna_counts_cleaned) >= 1000
+clean_counts <- rna_counts_cleaned[less_1000_mask, ]
+clean_genes <- rna_genes_cleaned[less_1000_mask, ]
+#unique(rna_clinical_cleaned$definition)
+dim(clean_counts)
+dim(rna_clinical_cleaned)
+dim(clean_genes)
 
 ```
 
@@ -56,22 +71,23 @@ Manipulate those columns so that they are ready for differential expression anal
 *3*
 Perform the differential expression analysis, All you need to do is fill in the appropriate # terms
 ```{r}
-dds <- DESeqDataSetFromMatrix(countData = #fill in,
-                              colData = #fill in,
-                              design= #fill in)
+dds <- DESeqDataSetFromMatrix(countData = clean_counts,
+                              colData = rna_clinical_cleaned,
+                              design=~ age_at_diagnosis + definition)
 
 dds_obj <- DESeq(dds)
 
 resultsNames(dds_obj)
 
-results <- results(dds_obj, format = "DataFrame", contrast = c(#variable name, #numerator , #denominator))
+results <- results(dds_obj, format = "DataFrame", contrast = c("definition", "Metastatic" , "Primary solid Tumor"))
 
 results <- data.frame(results)
 ```
 
 Prepare results dataframe for EnhancedVolcano plotting. Add two columns, "-log10(padj)" and "gene_name". Fill in these columns appropriately.
 ```{r}
-
+results$gene_name <-clean_genes$gene_name
+results$"-log10(padj)" <- -log10(results$padj)
 ```
 
 *4*
@@ -88,11 +104,11 @@ EnhancedVolcano(results,
 
 *5*
 # Explain what genes from each part of the Volcano Plot mean in terms of their significance and up/down regulation. 
-top-right genes: 
-bottom-right genes: 
-top-left genes: 
-bottom-left genes: 
-top-middle genes: 
-bottom-middle genes: 
+top-right genes: significant upregulated
+bottom-right genes: nonsignificant upregulated
+top-left genes: significant down regulated
+bottom-left genes: nonsignificant down regulated
+top-middle genes: significant normal expression
+bottom-middle genes: unsignificant normal expression
 
 Save the picture of the volcano plot (using either ggsave() or right clicking and manually downloading the image and push this .Rmd and the image to GitHub)
