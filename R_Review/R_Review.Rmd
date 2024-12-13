@@ -1,0 +1,85 @@
+
+// Part One //
+
+
+General Concepts
+1. TCGA is a database of cancer patient data. It contains things like patient information, cancer type, 
+mutations, RNA expression, methylation, and more. It is important because its a comprehensive collection 
+of genomic data, data that is vital for researchers to understand more about different cancers and their 
+treatments. 
+
+2. Some strengths of TCGA include its sheer amount of data, as it contains thousands of patients. It has a wide variety of cancers, allowing researchers to study various types. Some of its weaknesses are that it is a public database, meaning it has less funding than private ones. Also, since it is public, there is a lot of data cleaning that needs to be done before any research can be performed.
+
+Coding Skills
+1. To save a file to Github from my laptop, I use the following commands:
+    - git add         // Prepares file to be added
+    - git commit -m   // Allows me to write message
+    - git push        // Puts the file into github
+    
+2. To use a package, you need to download it and then run it.
+    - if (!require("package")) install.packages("package")    // Installs package
+    - library(package)                                        // Add package to code
+    
+3. To use a biodconductor package, you need to these steps:
+    - if (!require("BiocManager")) install.packages("BiocManager")    // Installs BiocManager
+    - if (!require("package")) BiocManager::install("package")        // Installs bioconductor package
+    - library(package)                                                // Adds package to code
+
+4. Boolean indexing labels data values as true or false. This is useful because we can then filter out data easily using ifelse mask statements.
+
+5. survival_mask <- data$vital_status == 'Alive'  // This puts TRUE for alive patients and FALSE for dead
+   data[survival_mask, ]                          // Filters out rows of patients that are FALSE (dead)
+   
+   data$age_category <- ifelse(data$age < 30, 'Young',              // Creates new category called age_category
+                      ifelse(data$age > 65, 'Old', 'Middle-Aged'))  // that assigns Young, Old, and Middle-Aged
+                                                                    // based on the number in data$age
+                                                                    
+
+// Part Two //
+
+
+```{r setup}
+    knitr::opts_knit$set(root.dir = normalizePath("/home1/chengpre/490_cluster/analysis_data")) 
+```
+
+
+```{r Package Setup}
+# install, only if needed, and load packages 
+if (!require("BiocManager")) install.packages("TCGAbiolinks")
+if (!require("BiocManager")) install.packages("BiocManager")
+if (!require("SummarizedExperiment")) BiocManager::install("SummarizedExperiment")
+if (!require("DESeq2")) BiocManager::install("DESeq2")
+if (!require("EnhancedVolcano")) BiocManager::install("EnhancedVolcano")
+if (!require("maftools")) install.packages("maftools")
+if (!require("ggplot2")) install.packages("ggplot2")
+if (!require("survival")) install.packages("survival")
+if(!require("survminer")) install.packages("survminer")
+
+library(TCGAbiolinks)
+library(SummarizedExperiment)
+library(DESeq2)
+library(EnhancedVolcano)
+library(maftools)
+library(ggplot2)
+library(survival)
+library(survminer)
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+   
